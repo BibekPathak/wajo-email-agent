@@ -89,6 +89,7 @@ _INTENT_RULES: dict[str, tuple[Optional[str], list[tuple[str, float]]]] = {
         ("share customer list", 4.0), ("send customer data", 4.0),
         ("share personal data", 4.0), ("send personal data", 4.0),
         ("disclose", 3.0), ("hand over", 3.0),
+        ("share the", 2.0), ("share a", 2.0), ("share our", 2.0), ("share", 1.5),
     ]),
     "share_confidential": ("disclose_data", [
         ("api key", 4.0), ("private key", 4.0), ("password", 3.0),
@@ -124,7 +125,7 @@ _INTENT_RULES: dict[str, tuple[Optional[str], list[tuple[str, float]]]] = {
     "send_external_email": ("send_email", [
         ("send an email", 3.0), ("send a message", 3.0), ("send the email", 3.0),
         ("get back to", 3.0), ("reach out", 3.0), ("email them", 3.0),
-        ("reply", 2.0), ("respond", 2.0), ("contact", 2.0),
+        ("reply", 2.0), ("respond", 2.0), ("contact", 2.0), ("send", 1.0),
     ]),
     "confirm_terms": ("send_email", [
         ("confirm the terms", 3.5), ("confirm terms", 3.0),
@@ -147,8 +148,8 @@ _INTENT_RULES: dict[str, tuple[Optional[str], list[tuple[str, float]]]] = {
         ("label", 2.0), ("tag", 2.0),
     ]),
     "move_email": ("move_email", [
-        ("move the email", 3.0), ("move to", 2.0), ("move into", 2.0),
-        ("file under", 2.5),
+        ("move the email", 3.0), ("move this email", 3.0), ("move to", 2.0),
+        ("move into", 2.0), ("move this", 2.0), ("file under", 2.5),
     ]),
     "classify_email": (None, [
         ("classify", 2.5), ("categorize", 2.5), ("triage", 2.0), ("sort", 1.5),
@@ -174,7 +175,7 @@ _CONFLICT_PAIRS: list[tuple[str, str]] = [
 _AMBIGUITY_MARKERS = [
     "not sure", "i don't know", "what should i", "what do you think",
     "handle this", "decide for me", "confused", "ambiguous", "either way",
-    "maybe", "up to you",
+    "maybe", "up to you", "figure out", "you decide", "what to do",
 ]
 
 _NEWSLETTER_SENDER_MARKERS = [

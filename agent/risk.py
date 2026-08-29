@@ -23,9 +23,13 @@ from .models import (
 )
 from .textutil import contains_any, contains_phrase, count_mentions
 
+# Financial *action* verbs. The intent category covers well-formed requests
+# (pay_invoice etc.); this verb list is the safety net for requests the
+# understanding layer misclassifies. Plain nouns like "invoice" or "payment"
+# must NOT trigger it (e.g. "label this email as 'invoice'" is not financial).
 FINANCIAL_KEYWORDS = [
-    "pay", "payment", "invoice", "transfer", "wire", "money", "usd", "eur",
-    "purchase", "buy", "bill", "charge", "remit", "settle",
+    "pay", "transfer", "wire", "remit", "purchase", "buy", "charge",
+    "settle", "send money",
 ]
 DESTRUCTIVE_KEYWORDS = [
     "delete", "permanently", "erase", "purge", "cancel my account",
@@ -43,26 +47,32 @@ SENSITIVE_KEYWORDS = [
 INJECTION_PATTERNS = [
     "ignore all previous instructions", "ignore previous instructions",
     "ignore your instructions", "ignore all prior instructions",
+    "ignore your system instructions", "ignore the system instructions",
     "disregard all previous", "forget all previous instructions",
-    "forget your instructions", "you are now authorized",
-    "you are authorized to", "you have full authorization",
-    "system prompt", "override your instructions", "new system prompt",
+    "forget your instructions", "forget the safety floor",
+    "reset your instructions", "bypass the safety",
+    "you are now authorized", "you are authorized to",
+    "you have full authorization", "system prompt",
+    "override your instructions", "new system prompt",
+    "system instructions",
     "forward all messages", "forward every email", "forward all emails",
-    "send all messages", "send every email", "secret instruction",
-    "hidden instruction", "you are an ai", "as an ai agent",
+    "send all messages", "send every email", "send all contacts",
+    "secret instruction", "hidden instruction", "you are an ai",
+    "as an ai agent",
 ]
 FAKE_AUTHORIZATION_PATTERNS = [
     "already approved", "user already approved", "approval has been given",
     "already authorized", "ceo approved", "manager approved",
-    "you already have permission", "no need to ask",
+    "you already have permission", "no need to ask", "no need to confirm",
 ]
 AUTHORITY_SPOOFING_PATTERNS = [
-    "system admin", "system administrator", "admin:",
+    "system admin", "system administrator", "admin:", "the ceo needs",
+    "ceo needs you",
 ]
 PREFERENCE_POISONING_PATTERNS = [
     "remember this forever", "always act automatically",
-    "always do this from now on", "never ask me", "from now on always",
-    "update my preferences", "set this preference",
+    "always do this from now on", "never ask me", "never ask for approval",
+    "from now on always", "update my preferences", "set this preference",
 ]
 
 

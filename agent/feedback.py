@@ -176,15 +176,22 @@ class FeedbackEngine:
         action_type: str,
         signal: FeedbackSignal,
         explicit: bool = True,
+        sender_category: str = "*",
         default_decision: Optional[AutonomyDecision] = None,
     ) -> Preference:
         """Low-level structured feedback without a decision object.
 
         Used by the evaluation harness to simulate batch user feedback.
+        ``sender_category`` scopes the preference (e.g. ``"newsletter"``) so
+        feedback about newsletters does not leak onto other senders.
         """
         return self._store.record_signal(
             user_id,
-            PreferenceKey(action_type=action_type, sender_category="*", context=""),
+            PreferenceKey(
+                action_type=action_type,
+                sender_category=sender_category,
+                context="",
+            ),
             positive=(signal is FeedbackSignal.POSITIVE),
             explicit=explicit,
             default_decision=default_decision,
