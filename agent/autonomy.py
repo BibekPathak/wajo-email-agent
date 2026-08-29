@@ -302,7 +302,11 @@ class AutonomyPolicy:
     ) -> DecisionResult:
         recommended = (
             requested_action
-            if decision in (AutonomyDecision.ACT_NOTIFY, AutonomyDecision.ASK)
+            if requested_action and decision in (
+                AutonomyDecision.SILENT,
+                AutonomyDecision.ACT_NOTIFY,
+                AutonomyDecision.ASK,
+            )
             else None
         )
 

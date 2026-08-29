@@ -7,5 +7,12 @@ make.
 """
 
 from .models import AutonomyDecision, DecisionResult, EmailSituation, RiskReport
+from .orchestrator import EmailAgent
 
-__all__ = ["AutonomyDecision", "DecisionResult", "EmailSituation", "RiskReport"]
+__all__ = [
+    "AutonomyDecision",
+    "DecisionResult",
+    "EmailAgent",
+    "EmailSituation",
+    "RiskReport",
+]
