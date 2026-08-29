@@ -22,10 +22,11 @@ dev = [
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "httpx>=0.27",
+    "fastapi>=0.115",
 ]
 
 [tool.setuptools.packages.find]
-include = ["agent*"]
+include = ["agent*", "api*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

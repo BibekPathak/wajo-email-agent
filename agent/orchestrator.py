@@ -11,6 +11,7 @@ pieces. The pipeline order is fixed and matches the design invariant:
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from typing import Optional
 
 from .autonomy import AutonomyPolicy
@@ -26,6 +27,10 @@ from .preferences import PreferenceStore
 from .risk import RiskAnalyzer
 from .safety import SafetyFloor
 from .understanding import EmailUnderstanding, MockUnderstanding
+
+# How many recent decisions to remember so the HTTP API can apply feedback
+# by decision_id.
+MAX_RECENT_DECISIONS = 1000
 
 
 class EmailAgent:
@@ -53,6 +58,7 @@ class EmailAgent:
         self.feedback = feedback or FeedbackEngine(self.preferences)
         self.executor = executor or Executor()
         self._default_user = default_user
+        self._recent_decisions: "OrderedDict[str, DecisionResult]" = OrderedDict()
 
     # --- main entry ---------------------------------------------------------
 
@@ -84,6 +90,12 @@ class EmailAgent:
         )
 
         self._execute(decision, analysis, email, safety)
+
+        self._recent_decisions[decision.decision_id] = decision
+        self._recent_decisions.move_to_end(decision.decision_id)
+        while len(self._recent_decisions) > MAX_RECENT_DECISIONS:
+            self._recent_decisions.popitem(last=False)
+
         return decision
 
     # --- feedback -----------------------------------------------------------
@@ -109,6 +121,31 @@ class EmailAgent:
 
     def preferences_for(self, user_id: Optional[str] = None) -> list[Preference]:
         return self.preferences.get_all(user_id or self._default_user)
+
+    def decision_by_id(self, decision_id: str) -> Optional[DecisionResult]:
+        """Look up a recent decision by its decision_id."""
+        return self._recent_decisions.get(decision_id)
+
+    def apply_feedback_by_id(
+        self,
+        user_id: Optional[str],
+        decision_id: str,
+        feedback_text: str = "",
+        *,
+        signal=None,
+        explicit: Optional[bool] = None,
+    ) -> Optional[Preference]:
+        """Record feedback about a recent decision, looked up by id.
+
+        Raises ``KeyError`` when the decision_id is unknown (e.g. the server
+        restarted or the decision aged out of the recent-decision registry).
+        """
+        decision = self.decision_by_id(decision_id)
+        if decision is None:
+            raise KeyError(decision_id)
+        return self.apply_feedback(
+            user_id, decision, feedback_text, signal=signal, explicit=explicit
+        )
 
     # --- internals ------------------------------------------------------------
 

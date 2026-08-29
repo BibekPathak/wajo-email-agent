@@ -152,6 +152,39 @@ use the LLM understanding instead, set `UNDERSTANDING_BACKEND=openai` plus
 `OPENAI_API_KEY`, `OPENAI_BASE_URL` (optional), `OPENAI_MODEL` (optional).
 Risk, safety, and authorization stay deterministic either way.
 
+## Optional HTTP API (FastAPI)
+
+A thin HTTP service exposing the agent. It contains no business logic — every
+handler delegates to the orchestrator.
+
+```bash
+pip install -e .[api]
+python -m api            # uvicorn on http://127.0.0.1:8000
+```
+
+Endpoints:
+
+```text
+POST /v1/agent/decide
+  {"email": {"sender": "alice@company.com", "subject": "Re: tomorrow",
+             "body": "Can we move tomorrow's internal meeting to 3pm?"},
+   "user_id": "demo-user"}
+  -> {"decision": "ask", "confidence": 0.8, "reason": "...",
+      "risk": {"irreversible": false, "external": false, ...},
+      "policy_trace": {...}, "decision_id": "..."}
+
+POST /v1/agent/feedback
+  {"user_id": "demo-user", "decision_id": "...",
+   "feedback": "Yes, you can handle these automatically."}
+
+GET /v1/agent/preferences/{user_id}
+  -> {"user_id": "demo-user", "preferences": [...]}
+```
+
+Interactive docs at `http://127.0.0.1:8000/docs`. The `decision_id` returned by
+`/decide` is what you pass to `/feedback`, so the learning loop works over HTTP
+exactly as it does in-process.
+
 ## How to run evaluations
 
 ```bash
@@ -233,6 +266,7 @@ future work.
 ```text
 agent/        core pipeline (models, understanding, risk, safety, autonomy,
               preferences, feedback, executor, orchestrator)
+api/          thin FastAPI service (optional)
 evals/        dataset generator, runner, metrics, reports
 tests/        unit + safety + learning + prompt-injection + end-to-end tests
 examples/     transcripts
