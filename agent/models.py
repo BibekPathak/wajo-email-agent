@@ -154,13 +154,17 @@ class Preference(BaseModel):
 
     `confidence` reflects accumulated evidence. It starts low and only grows
     with repeated, consistent feedback. Explicit negative feedback lowers it
-    quickly.
+    quickly. The explicit_* counts are a subset of the total counts; they let
+    the learning rule weight explicit feedback more strongly than inferred
+    feedback.
     """
 
     key: PreferenceKey
     preferred_decision: Optional[AutonomyDecision] = None
     positive_count: int = 0
     negative_count: int = 0
+    explicit_positive_count: int = 0
+    explicit_negative_count: int = 0
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
