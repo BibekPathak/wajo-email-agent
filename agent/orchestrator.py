@@ -83,7 +83,7 @@ class EmailAgent:
             preference=preference,
         )
 
-        self._execute(decision, analysis, safety)
+        self._execute(decision, analysis, email, safety)
         return decision
 
     # --- feedback -----------------------------------------------------------
@@ -112,7 +112,7 @@ class EmailAgent:
 
     # --- internals ------------------------------------------------------------
 
-    def _execute(self, decision: DecisionResult, analysis, safety) -> None:
+    def _execute(self, decision: DecisionResult, analysis, email, safety) -> None:
         """Simulate tool execution for autonomous decisions.
 
         SILENT/ACT_NOTIFY are executed (recorded) when the action passed the
@@ -123,4 +123,7 @@ class EmailAgent:
             return
         if decision.decision in (AutonomyDecision.SILENT, AutonomyDecision.ACT_NOTIFY):
             allowed = safety.allows(decision.decision)
-            self.executor.execute(tool, analysis.entities, safety_allowed=allowed)
+            arguments = dict(analysis.entities)
+            arguments.setdefault("message_id", email.id)
+            arguments.setdefault("recipient", email.sender)
+            self.executor.execute(tool, arguments, safety_allowed=allowed)

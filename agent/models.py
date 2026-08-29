@@ -139,6 +139,7 @@ class ToolCall(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict)
     timestamp: datetime = Field(default_factory=_utcnow)
     safety_allowed: bool = False
+    result: str = ""
 
 
 class PreferenceKey(BaseModel):
