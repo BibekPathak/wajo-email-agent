@@ -171,6 +171,7 @@ class PolicyTrace(BaseModel):
     risk_checks: dict[str, bool] = Field(default_factory=dict)
     safety_floor: dict[str, Any] = Field(default_factory=dict)
     preference: Optional[dict[str, Any]] = None
+    decision_rule: Optional[str] = None
     final_decision: str
     reason: str
 

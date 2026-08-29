@@ -171,3 +171,164 @@ def test_decision_carries_explainable_policy_trace():
     assert trace.safety_floor["allowed_decisions"] == ["ask", "escalate"]
     assert trace.final_decision == result.decision.value
     assert trace.reason
+
+
+# --- Phase 2: intent-category defaults ----------------------------------------
+
+
+def test_unknown_intent_escalates():
+    result = make_decision(intent="unrecognized_intent", action=None)
+    assert result.decision is AutonomyDecision.ESCALATE
+    assert result.policy_trace.decision_rule == "ambiguous"
+
+
+def test_ambiguous_risk_flag_escalates():
+    result = make_decision(
+        intent="reply_customer",
+        action=None,
+        risk=make_risk(ambiguous=True),
+    )
+    assert result.decision is AutonomyDecision.ESCALATE
+    assert result.policy_trace.decision_rule == "ambiguous"
+
+
+def test_high_risk_escalates_even_for_safe_internal_action():
+    result = make_decision(
+        intent="archive_email",
+        action="archive_email",
+        risk=make_risk(risk_level=RiskLevel.HIGH),
+    )
+    assert result.decision is AutonomyDecision.ESCALATE
+
+
+def test_financial_category_asks_even_without_risk_flag():
+    # Category-driven: even if the risk layer missed the flag, the intent
+    # category alone forces ASK.
+    result = make_decision(intent="pay_invoice", action=None, risk=make_risk())
+    assert result.decision is AutonomyDecision.ASK
+    assert result.policy_trace.decision_rule == "financial"
+
+
+def test_sensitive_category_escalates():
+    result = make_decision(intent="disclose_data", action=None)
+    assert result.decision is AutonomyDecision.ESCALATE
+    assert result.policy_trace.decision_rule == "sensitive"
+
+
+def test_external_category_asks_by_default():
+    result = make_decision(intent="confirm_terms", action="send_email")
+    assert result.decision is AutonomyDecision.ASK
+    assert result.policy_trace.decision_rule == "safety_floor"
+
+
+def test_medium_risk_internal_asks_by_default():
+    result = make_decision(
+        intent="cancel_meeting",
+        action="cancel_meeting",
+        risk=make_risk(risk_level=RiskLevel.MEDIUM),
+    )
+    assert result.decision is AutonomyDecision.ASK
+
+
+# --- Phase 2: preference upgrade gating ---------------------------------------
+
+
+def test_preference_cannot_upgrade_external_category():
+    preference = Preference(
+        key=PreferenceKey(action_type="confirm_terms"),
+        preferred_decision=AutonomyDecision.ACT_NOTIFY,
+        positive_count=20,
+        negative_count=0,
+        confidence=0.99,
+    )
+    result = make_decision(
+        intent="confirm_terms",
+        action="send_email",
+        preference=preference,
+    )
+    assert result.decision in (AutonomyDecision.ASK, AutonomyDecision.ESCALATE)
+
+
+def test_preference_cannot_upgrade_financial_category():
+    preference = Preference(
+        key=PreferenceKey(action_type="pay_invoice"),
+        preferred_decision=AutonomyDecision.ACT_NOTIFY,
+        positive_count=50,
+        negative_count=0,
+        confidence=0.99,
+    )
+    result = make_decision(intent="pay_invoice", action=None, preference=preference)
+    assert result.decision is AutonomyDecision.ASK
+
+
+def test_preference_can_increase_oversight_on_no_op():
+    # A user may prefer to be asked even about background actions.
+    preference = Preference(
+        key=PreferenceKey(action_type="archive_newsletter"),
+        preferred_decision=AutonomyDecision.ASK,
+        positive_count=9,
+        negative_count=1,
+        confidence=0.85,
+    )
+    result = make_decision(
+        intent="archive_newsletter",
+        action="archive_email",
+        preference=preference,
+    )
+    assert result.decision is AutonomyDecision.ASK
+
+
+def test_preference_can_make_low_risk_internal_silent():
+    preference = Preference(
+        key=PreferenceKey(action_type="archive_email"),
+        preferred_decision=AutonomyDecision.SILENT,
+        positive_count=10,
+        negative_count=0,
+        confidence=0.95,
+    )
+    result = make_decision(
+        intent="archive_email",
+        action="archive_email",
+        preference=preference,
+    )
+    assert result.decision is AutonomyDecision.SILENT
+    assert result.policy_trace.decision_rule == "learned_preference"
+
+
+def test_learned_preference_rule_recorded_in_trace():
+    preference = Preference(
+        key=PreferenceKey(action_type="schedule_meeting"),
+        preferred_decision=AutonomyDecision.ACT_NOTIFY,
+        positive_count=8,
+        negative_count=1,
+        confidence=0.9,
+    )
+    result = make_decision(
+        intent="reschedule_meeting",
+        action="schedule_meeting",
+        risk=make_risk(risk_level=RiskLevel.MEDIUM),
+        preference=preference,
+    )
+    assert result.policy_trace.decision_rule == "learned_preference"
+
+
+def test_safety_block_has_high_confidence():
+    result = make_decision(
+        intent="pay_invoice",
+        action="make_payment",
+        risk=make_risk(confidence=0.4),
+    )
+    assert result.confidence >= 0.9
+
+
+# --- Phase 2: all four decisions are reachable --------------------------------
+
+
+def test_all_four_decisions_reachable():
+    silent = make_decision(intent="classify_email", action=None)
+    act_notify = make_decision(intent="archive_email", action="archive_email")
+    ask = make_decision(intent="reply_customer", action="send_email")
+    escalate = make_decision(intent="disclose_data", action=None)
+    assert {silent.decision, act_notify.decision, ask.decision, escalate.decision} == set(
+        AutonomyDecision
+    )
