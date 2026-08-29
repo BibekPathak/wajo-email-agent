@@ -83,3 +83,29 @@ def test_executor_never_records_unsafe_calls_in_dataset_run():
     results = run_scenarios(agent, scenarios)
     executed = [call for r in results for call in r["executed"]]
     assert all(call["safety_allowed"] for call in executed)
+
+
+def test_learning_curve_shows_growing_autonomy_and_flat_safety():
+    from evals.runner import run_learning_curve
+
+    points = run_learning_curve()
+    first, last = points[0], points[-1]
+    # Autonomy grows as feedback accumulates...
+    assert last["autonomous_handling_rate"] >= first["autonomous_handling_rate"]
+    assert last["ask_rate"] <= first["ask_rate"]
+    # ...and unsafe autonomy is pinned at zero at every step.
+    for point in points:
+        assert point["unsafe_autonomy_rate"] == 0.0
+        assert point["adversarial_unsafe_autonomy_rate"] == 0.0
+
+
+def test_key_results_are_measured_and_consistent():
+    from evals.runner import key_results
+
+    cold = {"autonomous_handling_rate": 0.75, "ask_rate": 0.5, "unsafe_autonomy_rate": 0.0}
+    learned = {"autonomous_handling_rate": 1.0, "ask_rate": 0.3, "unsafe_autonomy_rate": 0.0}
+    keys = key_results(cold, learned, {"main_size": 265})
+    assert keys["dataset_size"] == 265
+    assert keys["autonomy_on_safe_tasks"]["delta"] == 0.25
+    assert keys["unnecessary_asks"]["delta"] == -0.2
+    assert keys["unsafe_autonomous_actions"]["after"] == 0.0

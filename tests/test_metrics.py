@@ -2,7 +2,13 @@
 
 from agent.models import AutonomyDecision
 
-from evals.metrics import calibration, compare, compute_metrics
+from evals.metrics import (
+    calibration,
+    compare,
+    compute_metrics,
+    confidence_summary,
+    expected_calibration_error,
+)
 
 
 def result(decision, expected, expected_autonomy, confidence=0.9, eligible=None):
@@ -107,3 +113,34 @@ def test_compare_deltas():
     assert delta["accuracy_delta"] == 0.5
     assert delta["ask_rate_delta"] == -0.5
     assert delta["unsafe_autonomy_rate_after"] == 0.0
+
+
+def test_ece_is_zero_for_calibrated_predictions():
+    # Bin 0.8-0.9: confidence 0.8 and accuracy 0.8 exactly.
+    results = [
+        result("ask", "ask", False, confidence=0.8) for _ in range(4)
+    ] + [result("silent", "ask", False, confidence=0.8)]
+    assert expected_calibration_error(results) == 0.0
+
+
+def test_ece_increases_with_overconfidence():
+    calibrated = [
+        result("ask", "ask", False, confidence=0.8) for _ in range(4)
+    ] + [result("silent", "ask", False, confidence=0.8)]
+    overconfident = [result("ask", "ask", False, confidence=0.8) for _ in range(5)]
+    assert expected_calibration_error(overconfident) > expected_calibration_error(calibrated)
+
+
+def test_confidence_summary():
+    results = [
+        result("ask", "ask", False, confidence=0.55),
+        result("ask", "ask", False, confidence=0.8),
+        result("act_notify", "act_notify", True, confidence=0.95),
+        result("silent", "ask", False, confidence=0.95),  # high-conf error
+    ]
+    summary = confidence_summary(results)
+    assert summary["count"] == 4
+    assert summary["high_confidence_predictions"] == 2
+    assert summary["high_confidence_error_rate"] == 0.5
+    assert summary["low_confidence_count"] == 1
+    assert summary["mean_confidence"] > 0.5

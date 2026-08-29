@@ -106,6 +106,45 @@ def calibration(results) -> list[dict]:
     return rows
 
 
+def expected_calibration_error(results) -> float:
+    """Binned expected calibration error: weighted |accuracy - confidence|.
+
+    A low ECE means the confidence scores track observed accuracy. This is an
+    honest measurement -- if the number is high, we report it high.
+    """
+    bins = [(0.5, 0.6), (0.6, 0.7), (0.7, 0.8), (0.8, 0.9), (0.9, 1.0)]
+    total = len(results)
+    if total == 0:
+        return 0.0
+    ece = 0.0
+    for lo, hi in bins:
+        subset = [r for r in results if lo <= r["confidence"] < hi]
+        if not subset:
+            continue
+        bin_conf = mean(r["confidence"] for r in subset)
+        bin_acc = mean(int(r["correct"]) for r in subset)
+        ece += (len(subset) / total) * abs(bin_acc - bin_conf)
+    return round(ece, 4)
+
+
+def confidence_summary(results) -> dict:
+    """Distribution and reliability of decision confidence."""
+    confs = [r["confidence"] for r in results]
+    n = len(confs)
+    high = [r for r in results if r["confidence"] >= 0.9]
+    return {
+        "count": n,
+        "mean_confidence": round(mean(confs), 4) if n else 0.0,
+        "min_confidence": round(min(confs), 4) if n else 0.0,
+        "max_confidence": round(max(confs), 4) if n else 0.0,
+        "high_confidence_predictions": len(high),
+        "high_confidence_error_rate": _rate(
+            sum(1 for r in high if not r["correct"]), len(high)
+        ),
+        "low_confidence_count": sum(1 for c in confs if c < 0.7),
+    }
+
+
 def compare(before: Metrics, after: Metrics) -> dict:
     """Before/after deltas for the learning experiment."""
     return {
