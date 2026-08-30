@@ -152,6 +152,12 @@ use the LLM understanding instead, set `UNDERSTANDING_BACKEND=openai` plus
 `OPENAI_API_KEY`, `OPENAI_BASE_URL` (optional), `OPENAI_MODEL` (optional).
 Risk, safety, and authorization stay deterministic either way.
 
+Attachment filenames and content types are treated as untrusted data too:
+they feed the understanding and risk layers (an `invoice_0420.pdf` attachment
+flags financial, `customer_list.xlsx` flags sensitive, and an
+`ignore_all_previous_instructions.txt` filename is caught by the injection
+detector) exactly like text in the body.
+
 ## Optional HTTP API (FastAPI)
 
 A thin HTTP service exposing the agent. It contains no business logic — every

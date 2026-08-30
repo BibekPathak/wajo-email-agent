@@ -24,3 +24,27 @@ def contains_any(text: str, phrases) -> bool:
 
 def count_mentions(text: str, phrases) -> int:
     return sum(1 for phrase in phrases if contains_phrase(text, phrase))
+
+
+def normalize_filename(filename: str) -> str:
+    """Normalize a filename into searchable tokens.
+
+    ``customer_list_2024.xlsx`` becomes ``customer list 2024 xlsx`` so phrase
+    matching (e.g. "customer list") works on real attachment names.
+    """
+    base = filename.rsplit("/", 1)[-1]
+    base = re.sub(r"\.[A-Za-z0-9]+$", "", base)
+    base = re.sub(r"[_.\-+]+", " ", base)
+    return base.lower().strip()
+
+
+def attachment_text(attachments) -> str:
+    """Join attachment names/content types into a searchable string."""
+    parts = []
+    for attachment in attachments:
+        name = getattr(attachment, "filename", "") or ""
+        content_type = getattr(attachment, "content_type", "") or ""
+        parts.append(normalize_filename(name))
+        if content_type:
+            parts.append(content_type.lower().replace("/", " "))
+    return " ".join(parts)

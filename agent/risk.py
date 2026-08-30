@@ -21,7 +21,7 @@ from .models import (
     RiskReport,
     ToolPolicy,
 )
-from .textutil import contains_any, contains_phrase, count_mentions
+from .textutil import attachment_text, contains_any, contains_phrase, count_mentions
 
 # Financial *action* verbs. The intent category covers well-formed requests
 # (pay_invoice etc.); this verb list is the safety net for requests the
@@ -39,7 +39,7 @@ SENSITIVE_KEYWORDS = [
     "password", "api key", "credentials", "secret", "confidential",
     "customer list", "personal data", "personal information", "private",
     "credit card", "social security", "passport", "bank account",
-    "proprietary", "health record", "medical record",
+    "proprietary", "health record", "medical record", "payroll",
 ]
 
 # Untrusted-content markers. Any of these is treated as an attempt to
@@ -84,6 +84,9 @@ class RiskAnalyzer:
 
     def assess(self, analysis: AnalysisResult, email: EmailSituation) -> RiskReport:
         text = (f"{email.subject}\n{email.body}\n{email.thread_context}").lower()
+        attachment_hint = attachment_text(email.attachments)
+        if attachment_hint:
+            text = f"{text}\n{attachment_hint}"
         intent = analysis.intent
         action = analysis.requested_action
         category = classify_intent(intent)

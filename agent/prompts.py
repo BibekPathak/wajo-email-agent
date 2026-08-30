@@ -50,6 +50,12 @@ def build_analysis_messages(email: EmailSituation) -> list[dict]:
     ]
     if email.thread_context:
         parts.append(f"THREAD CONTEXT:\n{email.thread_context}")
+    if email.attachments:
+        attachment_lines = [
+            f"- {att.filename} ({att.content_type or 'unknown'})"
+            for att in email.attachments
+        ]
+        parts.append("ATTACHMENTS:\n" + "\n".join(attachment_lines))
     return [
         {"role": "system", "content": build_system_prompt()},
         {"role": "user", "content": "\n".join(parts)},

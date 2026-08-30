@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 from .models import AnalysisResult, EmailSituation
 from .prompts import build_analysis_messages
-from .textutil import contains_any, contains_phrase
+from .textutil import attachment_text, contains_any, contains_phrase
 
 
 class UnderstandingError(RuntimeError):
@@ -262,6 +262,9 @@ class MockUnderstanding(EmailUnderstanding):
 
     def analyze(self, email: EmailSituation) -> AnalysisResult:
         text = (f"{email.subject}\n{email.body}").lower()
+        attachment_hint = attachment_text(email.attachments)
+        if attachment_hint:
+            text = f"{text}\n{attachment_hint}"
         sender_category = _classify_sender(email)
         intent, action, confidence = _resolve(text, _score_intents(text))
 
